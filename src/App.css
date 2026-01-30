@@ -1,0 +1,335 @@
+/* Gene Editor Styles */
+
+/* 基础样式 */
+* {
+  box-sizing: border-box;
+}
+
+/* DNA序列样式 */
+.dna-sequence {
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.5px;
+}
+
+/* 碱基颜色 */
+.base-a {
+  color: #FF6B6B;
+}
+
+.base-t {
+  color: #4ECDC4;
+}
+
+.base-c {
+  color: #45B7D1;
+}
+
+.base-g {
+  color: #96CEB4;
+}
+
+/* 特征样式 */
+.feature-gene {
+  background-color: #FF6B6B;
+}
+
+.feature-cds {
+  background-color: #4ECDC4;
+}
+
+.feature-promoter {
+  background-color: #FFEAA7;
+}
+
+.feature-terminator {
+  background-color: #DDA0DD;
+}
+
+.feature-rep_origin {
+  background-color: #98D8C8;
+}
+
+/* 酶切位点样式 */
+.enzyme-marker {
+  color: #E74C3C;
+}
+
+/* 选择高亮 */
+.selection-highlight {
+  background-color: rgba(52, 152, 219, 0.3);
+  border: 1px solid #3498DB;
+}
+
+/* 环形图谱样式 */
+.plasmid-map {
+  cursor: crosshair;
+}
+
+.plasmid-feature {
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.plasmid-feature:hover {
+  opacity: 0.8;
+}
+
+.plasmid-enzyme {
+  cursor: pointer;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* 表格样式 */
+.data-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.data-table th,
+.data-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.data-table th {
+  background-color: #f9fafb;
+  font-weight: 600;
+  color: #374151;
+}
+
+.data-table tr:hover {
+  background-color: #f9fafb;
+}
+
+/* 工具提示 */
+.tooltip {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* 对话框样式 */
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.dialog-content {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* 标签页样式 */
+.tab-list {
+  display: flex;
+  border-bottom: 1px solid #e5e7eb;
+  gap: 4px;
+}
+
+.tab {
+  padding: 8px 16px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.tab:hover {
+  background-color: #f9fafb;
+}
+
+.tab.active {
+  border-bottom-color: #3B82F6;
+  color: #3B82F6;
+  font-weight: 500;
+}
+
+/* 按钮样式 */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.btn-primary {
+  background-color: #3B82F6;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #2563EB;
+}
+
+.btn-secondary {
+  background-color: #f3f4f6;
+  color: #374151;
+  border-color: #d1d5db;
+}
+
+.btn-secondary:hover {
+  background-color: #e5e7eb;
+}
+
+.btn-danger {
+  background-color: #EF4444;
+  color: white;
+}
+
+.btn-danger:hover {
+  background-color: #DC2626;
+}
+
+/* 输入框样式 */
+.input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #3B82F6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* 卡片样式 */
+.card {
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+  padding: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.card-body {
+  padding: 16px;
+}
+
+.card-footer {
+  padding: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* 徽章样式 */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.badge-blue {
+  background-color: #DBEAFE;
+  color: #1E40AF;
+}
+
+.badge-green {
+  background-color: #D1FAE5;
+  color: #065F46;
+}
+
+.badge-red {
+  background-color: #FEE2E2;
+  color: #991B1B;
+}
+
+.badge-yellow {
+  background-color: #FEF3C7;
+  color: #92400E;
+}
+
+/* 动画 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.slide-in {
+  animation: slideIn 0.3s ease-in-out;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .tab-list {
+    flex-wrap: wrap;
+  }
+  
+  .tab {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  
+  .dialog-content {
+    width: 95%;
+    padding: 16px;
+  }
+}
