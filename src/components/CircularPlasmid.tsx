@@ -220,16 +220,107 @@ export const CircularPlasmid: React.FC<CircularPlasmidProps> = ({
         featureLayers.set(feature.id, layer);
       });
       
-      // 绘制特征
+      // 标签防重叠布局计算
+      interface LabelLayoutItem {
+        feature: typeof sortedFeatures[0];
+        midAngle: number;
+        layer: number;
+        labelRadius: number;
+        radialLayer: number;
+        textAnchor: string;
+        labelOffset: number;
+        displayLabel: string;
+        featureOuterR: number;
+      }
+      
+      const labelLayoutItems: LabelLayoutItem[] = [];
+      
+      // 首先计算所有标签的基本信息
       sortedFeatures.forEach((feature) => {
         const layer = featureLayers.get(feature.id) || 0;
         const startAngle = positionToAngle(feature.start);
         const endAngle = positionToAngle(feature.end);
+        const midAngle = (startAngle + endAngle) / 2;
+        const layerOffset = layer * 18;
+        const featureOuterR = innerRadius + 8 + layerOffset + 14;
         
-        // 每层向外扩展
+        const labelText = feature.label || feature.name;
+        const maxLabelLength = 25;
+        const displayLabel = labelText.length > maxLabelLength 
+          ? labelText.substring(0, maxLabelLength) + '...' 
+          : labelText;
+        
+        const textAnchor = midAngle > 180 ? 'end' : 'start';
+        const labelOffset = midAngle > 180 ? -8 : 8;
+        
+        labelLayoutItems.push({
+          feature,
+          midAngle,
+          layer,
+          labelRadius: labelRadius + layer * 15,
+          radialLayer: 0,
+          textAnchor,
+          labelOffset,
+          displayLabel,
+          featureOuterR,
+        });
+      });
+      
+      // 计算标签径向分层，避免重叠
+      // 按角度排序
+      labelLayoutItems.sort((a, b) => a.midAngle - b.midAngle);
+      
+      const minLabelAngleGap = 14; // 标签间最小角度间隔（度）
+      const labelRadiusStep = 22; // 每层半径增量
+      
+      // 为每个标签计算合适的径向层
+      labelLayoutItems.forEach((item, index) => {
+        let radialLayer = 0;
+        let placed = false;
+        
+        while (!placed && radialLayer < 6) {
+          let canPlace = true;
+          const currentRadius = item.labelRadius + radialLayer * labelRadiusStep;
+          
+          // 检查与已处理标签的重叠
+          for (let i = 0; i < index; i++) {
+            const other = labelLayoutItems[i];
+            const otherRadius = other.labelRadius + other.radialLayer * labelRadiusStep;
+            
+            // 只检查同一径向层或相邻层的标签
+            if (Math.abs(currentRadius - otherRadius) < labelRadiusStep / 2) {
+              // 计算角度差（考虑环形）
+              let angleDiff = Math.abs(item.midAngle - other.midAngle);
+              if (angleDiff > 180) angleDiff = 360 - angleDiff;
+              
+              if (angleDiff < minLabelAngleGap) {
+                canPlace = false;
+                break;
+              }
+            }
+          }
+          
+          if (canPlace) {
+            placed = true;
+          } else {
+            radialLayer++;
+          }
+        }
+        
+        item.labelRadius = item.labelRadius + radialLayer * labelRadiusStep;
+        item.radialLayer = radialLayer;
+      });
+      
+      // 绘制特征和标签
+      labelLayoutItems.forEach((item) => {
+        const { feature, midAngle, featureOuterR, displayLabel, textAnchor, labelOffset } = item;
+        const startAngle = positionToAngle(feature.start);
+        const endAngle = positionToAngle(feature.end);
+        const angleSpan = endAngle - startAngle;
+        const layer = featureLayers.get(feature.id) || 0;
         const layerOffset = layer * 18;
         const featureInnerR = innerRadius + 8 + layerOffset;
-        const featureOuterR = featureInnerR + 14;
+        const featureMidR = (featureInnerR + featureOuterR) / 2;
         
         // 绘制特征弧形
         const featurePath = getArcPath(startAngle, endAngle, featureInnerR, featureOuterR);
@@ -254,10 +345,69 @@ export const CircularPlasmid: React.FC<CircularPlasmidProps> = ({
           .on('mouseout', () => setHoveredFeature(null))
           .on('click', () => onFeatureClick?.(feature));
         
-        // 绘制标签 - 只在特征足够大时显示
-        const midAngle = (startAngle + endAngle) / 2;
-        const labelRadiusWithLayer = labelRadius + layer * 15;
-        const labelPos = getLabelPosition(midAngle, labelRadiusWithLayer);
+        // 在特征弧形上绘制箭头（仅当特征足够大时）
+        const minAngleForArrow = 8; // 最小角度才显示箭头
+        if (angleSpan > minAngleForArrow) {
+          const arrowColor = 'rgba(0,0,0,0.6)';
+          const arrowSize = 5;
+          
+          // 计算箭头位置（弧形的中点）
+          const getArrowPos = (angle: number, radius: number) => {
+            const rad = angleToRadians(angle);
+            return {
+              x: centerX + radius * Math.cos(rad),
+              y: centerY + radius * Math.sin(rad),
+            };
+          };
+          
+          // 绘制箭头函数
+          const drawArrow = (angle: number, direction: 'forward' | 'reverse') => {
+            const pos = getArrowPos(angle, featureMidR);
+            const rad = angleToRadians(angle);
+            
+            // 根据方向计算箭头指向
+            // forward: 顺时针方向 (角度增加方向)
+            // reverse: 逆时针方向 (角度减小方向)
+            const arrowAngle = direction === 'forward' 
+              ? rad + Math.PI / 2  // 垂直于半径，顺时针
+              : rad - Math.PI / 2; // 垂直于半径，逆时针
+            
+            // 计算箭头的三个点
+            const tipX = pos.x + Math.cos(arrowAngle) * arrowSize;
+            const tipY = pos.y + Math.sin(arrowAngle) * arrowSize;
+            
+            const baseAngle1 = arrowAngle + Math.PI * 0.8;
+            const baseAngle2 = arrowAngle - Math.PI * 0.8;
+            
+            const base1X = pos.x + Math.cos(baseAngle1) * arrowSize * 0.6;
+            const base1Y = pos.y + Math.sin(baseAngle1) * arrowSize * 0.6;
+            const base2X = pos.x + Math.cos(baseAngle2) * arrowSize * 0.6;
+            const base2Y = pos.y + Math.sin(baseAngle2) * arrowSize * 0.6;
+            
+            const arrowPath = `M ${tipX} ${tipY} L ${base1X} ${base1Y} L ${base2X} ${base2Y} Z`;
+            
+            featureGroup.append('path')
+              .attr('d', arrowPath)
+              .attr('fill', arrowColor);
+          };
+          
+          // 根据链方向绘制箭头
+          if (feature.strand === 'forward') {
+            // 正向：在弧形中点绘制一个顺时针箭头
+            drawArrow(midAngle, 'forward');
+          } else if (feature.strand === 'reverse') {
+            // 反向：在弧形中点绘制一个逆时针箭头
+            drawArrow(midAngle, 'reverse');
+          } else if (feature.strand === 'both') {
+            // 双向：在弧形两端各绘制一个箭头
+            const offsetAngle = angleSpan * 0.25;
+            drawArrow(startAngle + offsetAngle, 'forward');
+            drawArrow(endAngle - offsetAngle, 'reverse');
+          }
+        }
+        
+        // 绘制标签
+        const labelPos = getLabelPosition(midAngle, item.labelRadius);
         const connectorEnd = getLabelPosition(midAngle, featureOuterR + 5);
         
         // 连接线
@@ -271,23 +421,13 @@ export const CircularPlasmid: React.FC<CircularPlasmidProps> = ({
           .attr('opacity', 0.5);
         
         // 标签文字
-        const textAnchor = midAngle > 180 ? 'end' : 'start';
-        const labelOffset = midAngle > 180 ? -8 : 8;
-        const labelText = feature.label || feature.name;
-        
-        // 截断过长的标签
-        const maxLabelLength = 25;
-        const displayLabel = labelText.length > maxLabelLength 
-          ? labelText.substring(0, maxLabelLength) + '...' 
-          : labelText;
-        
         featureGroup.append('text')
           .attr('x', labelPos.x + labelOffset)
           .attr('y', labelPos.y)
           .attr('text-anchor', textAnchor)
           .attr('dominant-baseline', 'middle')
           .attr('font-size', '10')
-          .attr('fill', feature.color || '#333')
+          .attr('fill', '#333')
           .attr('font-weight', '500')
           .text(displayLabel);
       });

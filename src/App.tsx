@@ -411,6 +411,34 @@ function App() {
                 onBaseClick={(position) => {
                   setSelection(position, position);
                 }}
+                onSelectionChange={(start, end) => {
+                  setSelection(start, end);
+                }}
+                onDeleteSelection={(start, end) => {
+                  deleteBases(start - 1, end);
+                  setSelection(null, null);
+                }}
+                onAddFeature={(start, end) => {
+                  // 可以打开添加特征的对话框
+                  const name = prompt('Enter feature name:');
+                  if (name) {
+                    addFeature({
+                      name,
+                      type: 'misc_feature',
+                      start,
+                      end,
+                      strand: 'forward',
+                    });
+                  }
+                }}
+                onAddPrimer={(start, end) => {
+                  // 可以打开添加引物的对话框
+                  const name = prompt('Enter primer name:');
+                  if (name) {
+                    const primerSequence = sequence.sequence.substring(start - 1, end);
+                    alert(`Primer sequence: ${primerSequence}`);
+                  }
+                }}
                 selectedBase={viewState.selectedBase}
                 selectionStart={viewState.selectionStart}
                 selectionEnd={viewState.selectionEnd}

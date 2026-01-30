@@ -1,5 +1,7 @@
-import React, { useRef, useState, useCallback, useMemo } from 'react';
+import React, { useRef, useState, useCallback, useMemo, useEffect } from 'react';
 import type { DNASequence, Feature, RestrictionSite } from '@/types/dna';
+import { Button } from '@/components/ui/button';
+import { Scissors, Trash2, Plus, Dna, Crosshair, X } from 'lucide-react';
 
 interface LinearSequenceProps {
   sequence: DNASequence;
@@ -8,6 +10,10 @@ interface LinearSequenceProps {
   onFeatureClick?: (feature: Feature) => void;
   onEnzymeClick?: (enzyme: RestrictionSite) => void;
   onBaseClick?: (position: number) => void;
+  onSelectionChange?: (start: number | null, end: number | null) => void;
+  onDeleteSelection?: (start: number, end: number) => void;
+  onAddFeature?: (start: number, end: number) => void;
+  onAddPrimer?: (start: number, end: number) => void;
   selectedBase?: number | null;
   selectionStart?: number | null;
   selectionEnd?: number | null;
@@ -32,7 +38,6 @@ const calculateFeatureLayers = (features: Feature[], startPos: number, endPos: n
            (f.start <= startPos && f.end >= endPos)
   );
   
-  // 按起始位置排序
   const sortedFeatures = [...rowFeatures].sort((a, b) => a.start - b.start);
   
   sortedFeatures.forEach((feature) => {
@@ -45,7 +50,6 @@ const calculateFeatureLayers = (features: Feature[], startPos: number, endPos: n
     while (!placed) {
       let canPlace = true;
       
-      // 检查与同一层的其他特征是否重叠
       for (const [otherId, otherLayer] of layers) {
         if (otherLayer === layer) {
           const otherFeature = sortedFeatures.find(f => f.id === otherId);
@@ -53,7 +57,6 @@ const calculateFeatureLayers = (features: Feature[], startPos: number, endPos: n
             const otherStart = Math.max(otherFeature.start, startPos);
             const otherEnd = Math.min(otherFeature.end, endPos);
             
-            // 检查是否有重叠（保留5个碱基的间隙）
             if (!(fEnd + 5 < otherStart || fStart > otherEnd + 5)) {
               canPlace = false;
               break;
@@ -75,12 +78,11 @@ const calculateFeatureLayers = (features: Feature[], startPos: number, endPos: n
   return layers;
 };
 
-// 计算酶切位点的层数分配（避免标签重叠）
+// 计算酶切位点的层数分配
 const calculateEnzymeLayers = (enzymes: RestrictionSite[], startPos: number, endPos: number, charWidth: number, minLabelWidth: number = 40): Map<string, number> => {
   const layers = new Map<string, number>();
   const rowEnzymes = enzymes.filter((e) => e.position >= startPos && e.position <= endPos);
   
-  // 按位置排序
   const sortedEnzymes = [...rowEnzymes].sort((a, b) => a.position - b.position);
   
   sortedEnzymes.forEach((enzyme) => {
@@ -95,7 +97,6 @@ const calculateEnzymeLayers = (enzymes: RestrictionSite[], startPos: number, end
     while (!placed) {
       let canPlace = true;
       
-      // 检查与同一层的其他酶是否重叠
       for (const [otherId, otherLayer] of layers) {
         if (otherLayer === layer) {
           const otherEnzyme = sortedEnzymes.find(e => e.id === otherId);
@@ -104,7 +105,6 @@ const calculateEnzymeLayers = (enzymes: RestrictionSite[], startPos: number, end
             const otherLabelStart = otherPos - Math.floor(labelWidthInBases / 2);
             const otherLabelEnd = otherPos + Math.floor(labelWidthInBases / 2);
             
-            // 检查标签是否重叠（保留1个碱基的间隙）
             if (!(labelEnd + 1 < otherLabelStart || labelStart > otherLabelEnd + 1)) {
               canPlace = false;
               break;
@@ -133,28 +133,45 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
   onFeatureClick,
   onEnzymeClick,
   onBaseClick,
+  onSelectionChange,
+  onDeleteSelection,
+  onAddFeature,
+  onAddPrimer,
   selectedBase,
-  selectionStart,
-  selectionEnd,
+  selectionStart: externalSelectionStart,
+  selectionEnd: externalSelectionEnd,
   showFeatures = true,
   showEnzymes = true,
   showTranslations = true,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const sequenceContainerRef = useRef<HTMLDivElement>(null);
   const [hoveredFeature, setHoveredFeature] = useState<Feature | null>(null);
   const [hoveredEnzyme, setHoveredEnzyme] = useState<RestrictionSite | null>(null);
   const [selectedFeature, setSelectedFeature] = useState<Feature | null>(null);
   const [clickedFeature, setClickedFeature] = useState<Feature | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+  
+  // 内部选择状态（用于拖拽选择）
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState<number | null>(null);
+  const [dragCurrent, setDragCurrent] = useState<number | null>(null);
+  const [cursorPosition, setCursorPosition] = useState<number | null>(null);
+  
+  // 使用外部选择状态或内部拖拽状态
+  const effectiveSelectionStart = externalSelectionStart ?? (isDragging ? Math.min(dragStart ?? 0, dragCurrent ?? 0) : null);
+  const effectiveSelectionEnd = externalSelectionEnd ?? (isDragging ? Math.max(dragStart ?? 0, dragCurrent ?? 0) : null);
+  const hasSelection = effectiveSelectionStart !== null && effectiveSelectionEnd !== null && 
+                       effectiveSelectionStart !== effectiveSelectionEnd;
 
   const charWidth = 14;
-  const baseRowHeight = 28; // 序列行基础高度
-  const featureHeight = 18; // 每个特征条的高度
-  const featureGap = 4; // 特征条之间的间隙
-  const enzymeMarkerHeight = 14; // 酶三角形标记高度
-  const enzymeLabelHeight = 14; // 酶标签行高度
-  const translationHeight = 16; // 氨基酸翻译行高度
-  const paddingY = 12; // 上下内边距
+  const baseRowHeight = 28;
+  const featureHeight = 18;
+  const featureGap = 4;
+  const enzymeMarkerHeight = 14;
+  const enzymeLabelHeight = 14;
+  const translationHeight = 16;
+  const paddingY = 12;
 
   // 获取氨基酸
   const getAminoAcid = useCallback((pos: number, frame: number) => {
@@ -184,8 +201,6 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
     return codonTable[codon] || '?';
   }, [sequence.sequence]);
 
-
-
   // 检查位置是否在特征内
   const getFeatureAtPosition = useCallback((position: number): Feature | null => {
     return sequence.features.find(
@@ -193,21 +208,64 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
     ) || null;
   }, [sequence.features]);
 
+  // 计算位置对应的行和列
+  const getPositionFromMouse = useCallback((clientX: number, clientY: number): number | null => {
+    if (!sequenceContainerRef.current) return null;
+    
+    const rect = sequenceContainerRef.current.getBoundingClientRect();
+    const scrollTop = sequenceContainerRef.current.scrollTop;
+    const x = clientX - rect.left;
+    const y = clientY - rect.top + scrollTop;
+    
+    // 找到对应的行
+    const headerHeight = 40; // 表头高度
+    const rowY = y - headerHeight - 8; // 减去padding
+    
+    if (rowY < 0) return null;
+    
+    // 累积计算找到行
+    let currentY = 0;
+    let rowIndex = 0;
+    const totalRows = Math.ceil(sequence.length / basesPerRow);
+    
+    // 简化计算：假设每行高度大致相同
+    const avgRowHeight = rowY / (totalRows / 2); // 粗略估计
+    rowIndex = Math.floor(rowY / 50); // 假设平均行高约50
+    rowIndex = Math.max(0, Math.min(rowIndex, totalRows - 1));
+    
+    // 精确计算
+    let accumulatedY = 0;
+    for (let i = 0; i < totalRows; i++) {
+      const rowHeight = calculateRowHeight(i);
+      if (accumulatedY + rowHeight > rowY) {
+        rowIndex = i;
+        break;
+      }
+      accumulatedY += rowHeight;
+    }
+    
+    const startPos = rowIndex * basesPerRow + 1;
+    const col = Math.floor((x - 60 + charWidth / 2) / charWidth);
+    
+    if (col < 0 || col >= basesPerRow) return null;
+    
+    const position = startPos + col;
+    return position > sequence.length ? null : position;
+  }, [basesPerRow, charWidth, sequence.length]);
+
   // 计算每行的高度
   const calculateRowHeight = useCallback((rowIndex: number): number => {
     const startPos = rowIndex * basesPerRow + 1;
     const endPos = Math.min(startPos + basesPerRow - 1, sequence.length);
     
-    let height = paddingY * 2 + baseRowHeight; // 基础高度
+    let height = paddingY * 2 + baseRowHeight;
     
-    // 计算特征层数
     if (showFeatures) {
       const featureLayers = calculateFeatureLayers(sequence.features, startPos, endPos);
       const maxLayer = Math.max(0, ...Array.from(featureLayers.values()));
       height += (maxLayer + 1) * (featureHeight + featureGap) + 8;
     }
     
-    // 酶标记高度
     if (showEnzymes) {
       const enzymeLayers = calculateEnzymeLayers(sequence.restrictionSites, startPos, endPos, charWidth);
       const maxEnzymeLayer = Math.max(-1, ...Array.from(enzymeLayers.values()));
@@ -216,7 +274,6 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
       }
     }
     
-    // CDS feature的氨基酸翻译高度
     if (showTranslations && showFeatures) {
       const rowFeatures = sequence.features.filter(
         (f) => f.type === 'CDS' &&
@@ -231,6 +288,94 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
     
     return height;
   }, [sequence, basesPerRow, showFeatures, showEnzymes, showTranslations]);
+
+  // 鼠标事件处理
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.button !== 0) return; // 只处理左键
+    const pos = getPositionFromMouse(e.clientX, e.clientY);
+    if (pos !== null) {
+      setIsDragging(true);
+      setDragStart(pos);
+      setDragCurrent(pos);
+      setCursorPosition(pos);
+    }
+  }, [getPositionFromMouse]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setTooltipPos({
+        x: e.clientX - rect.left + 15,
+        y: e.clientY - rect.top + 15
+      });
+    }
+    
+    if (isDragging) {
+      const pos = getPositionFromMouse(e.clientX, e.clientY);
+      if (pos !== null) {
+        setDragCurrent(pos);
+        setCursorPosition(pos);
+      }
+    }
+  }, [isDragging, getPositionFromMouse]);
+
+  const handleMouseUp = useCallback(() => {
+    if (isDragging) {
+      setIsDragging(false);
+      // 通知父组件选择变化
+      if (dragStart !== null && dragCurrent !== null && dragStart !== dragCurrent) {
+        const start = Math.min(dragStart, dragCurrent);
+        const end = Math.max(dragStart, dragCurrent);
+        onSelectionChange?.(start, end);
+      }
+    }
+  }, [isDragging, dragStart, dragCurrent, onSelectionChange]);
+
+  // 全局鼠标释放监听
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (isDragging) {
+        setIsDragging(false);
+        if (dragStart !== null && dragCurrent !== null && dragStart !== dragCurrent) {
+          const start = Math.min(dragStart, dragCurrent);
+          const end = Math.max(dragStart, dragCurrent);
+          onSelectionChange?.(start, end);
+        }
+      }
+    };
+
+    if (isDragging) {
+      window.addEventListener('mouseup', handleGlobalMouseUp);
+      return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+    }
+  }, [isDragging, dragStart, dragCurrent, onSelectionChange]);
+
+  // 清除选择
+  const clearSelection = useCallback(() => {
+    onSelectionChange?.(null, null);
+    setDragStart(null);
+    setDragCurrent(null);
+  }, [onSelectionChange]);
+
+  // 计算光标位置
+  const getCursorStyle = useCallback((position: number): React.CSSProperties | null => {
+    const rowIndex = Math.floor((position - 1) / basesPerRow);
+    const col = (position - 1) % basesPerRow;
+    
+    const rowOffset = getRowOffset(rowIndex);
+    const sequenceY = paddingY + 16; // rulerY + 16
+    
+    return {
+      position: 'absolute',
+      left: 60 + col * charWidth,
+      top: rowOffset + sequenceY - 2,
+      width: 2,
+      height: baseRowHeight + 4,
+      backgroundColor: '#3B82F6',
+      pointerEvents: 'none',
+      zIndex: 10,
+    };
+  }, [basesPerRow, charWidth, paddingY]);
 
   // 预计算所有行的高度
   const rowHeights = useMemo(() => {
@@ -251,17 +396,6 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
     return offset;
   }, [rowHeights]);
 
-  // 处理鼠标移动
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      setTooltipPos({
-        x: e.clientX - rect.left + 15,
-        y: e.clientY - rect.top + 15
-      });
-    }
-  }, []);
-
   // 渲染单行
   const renderRow = useCallback((rowIndex: number) => {
     const startPos = rowIndex * basesPerRow + 1;
@@ -269,49 +403,35 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
     const rowSequence = sequence.sequence.substring(startPos - 1, endPos);
     const rowHeight = rowHeights[rowIndex];
     
-    // 计算该行的特征层数
     const featureLayers = calculateFeatureLayers(sequence.features, startPos, endPos);
     const maxLayer = Math.max(0, ...Array.from(featureLayers.values()));
     
-    // 获取该行的酶切位点
     const rowEnzymes = sequence.restrictionSites.filter(
       (e) => e.position >= startPos && e.position <= endPos
     );
     
-    // 计算酶切位点层数
     const enzymeLayers = calculateEnzymeLayers(sequence.restrictionSites, startPos, endPos, charWidth);
     const maxEnzymeLayer = Math.max(-1, ...Array.from(enzymeLayers.values()));
 
-    // 计算各部分的垂直位置
-    // 布局顺序（从上到下）：位置标尺 -> 序列 -> 酶切位点 -> 特征轨道 -> 氨基酸翻译
     let currentY = paddingY;
-    
-    // 位置标尺
     const rulerY = currentY;
     currentY += 16;
-    
-    // 序列（最上）
     const sequenceY = currentY;
     currentY += baseRowHeight + 4;
     
-    // 酶切位点（中间）
     const enzymeY = rowEnzymes.length > 0 ? currentY : 0;
     const enzymeTrackHeight = maxEnzymeLayer >= 0 ? enzymeMarkerHeight + (maxEnzymeLayer + 1) * enzymeLabelHeight : 0;
     if (rowEnzymes.length > 0) {
       currentY += enzymeTrackHeight + 4;
     }
     
-    // 特征轨道（最下）
     const featureStartY = currentY;
     const featureTrackHeight = (maxLayer + 1) * (featureHeight + featureGap);
-    currentY += featureTrackHeight;
-    
-    // CDS feature的氨基酸翻译将显示在每个feature下方
 
     return (
       <div 
         key={rowIndex} 
-        className="relative border-b border-gray-100"
+        className="relative border-b border-gray-100 select-none"
         style={{ height: rowHeight }}
       >
         {/* 位置标尺 */}
@@ -372,7 +492,7 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
           </div>
         )}
         
-        {/* 特征轨道 - 分层显示 */}
+        {/* 特征轨道 */}
         {showFeatures && (
           <div className="absolute" style={{ top: featureStartY, left: 60, height: featureTrackHeight }}>
             {sequence.features
@@ -420,7 +540,6 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
                       }}
                       title={`${feature.label || feature.name} (${feature.start}-${feature.end})`}
                     >
-                      {/* 左侧箭头 */}
                       {width > 24 && feature.strand !== 'both' && (
                         <div className="absolute left-1 top-1/2 -translate-y-1/2">
                           {feature.strand === 'forward' ? (
@@ -434,7 +553,6 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
                           ) : null}
                         </div>
                       )}
-                      {/* 双向箭头 */}
                       {width > 24 && feature.strand === 'both' && (
                         <>
                           <div className="absolute left-1 top-1/2 -translate-y-1/2">
@@ -449,7 +567,6 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
                           </div>
                         </>
                       )}
-                      {/* 右侧箭头 */}
                       {width > 24 && feature.strand !== 'both' && (
                         <div className="absolute right-1 top-1/2 -translate-y-1/2">
                           {feature.strand === 'forward' ? (
@@ -469,7 +586,6 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
                         </span>
                       )}
                     </div>
-                    {/* CDS feature的氨基酸翻译 */}
                     {showTranslations && isCDS && (
                       <div
                         className="absolute flex"
@@ -501,15 +617,18 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
           </div>
         )}
         
-        {/* 序列 */}
-        <div className="absolute flex" style={{ top: sequenceY, left: 60 }}>
+        {/* 序列 - 可拖拽选择 */}
+        <div 
+          className="absolute flex select-none" 
+          style={{ top: sequenceY, left: 60 }}
+          onMouseDown={handleMouseDown}
+        >
           {rowSequence.split('').map((base, idx) => {
             const position = startPos + idx;
-            const isSelected = selectedBase === position;
-            const isInSelection = selectionStart !== null && selectionEnd !== null && 
-              selectionStart !== undefined && selectionEnd !== undefined &&
-              position >= Math.min(selectionStart, selectionEnd) &&
-              position <= Math.max(selectionStart, selectionEnd);
+            const isCursor = cursorPosition === position;
+            const isInSelection = effectiveSelectionStart !== null && effectiveSelectionEnd !== null && 
+              position >= Math.min(effectiveSelectionStart, effectiveSelectionEnd) &&
+              position <= Math.max(effectiveSelectionStart, effectiveSelectionEnd);
             const feature = getFeatureAtPosition(position);
             const isInSelectedFeature = selectedFeature && 
               position >= selectedFeature.start && 
@@ -521,22 +640,24 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
             return (
               <span
                 key={idx}
-                className={`inline-block text-center cursor-pointer font-mono text-sm select-none leading-7
-                  ${isSelected ? 'bg-blue-500 text-white' : ''}
-                  ${isInSelection && !isSelected ? 'bg-blue-100' : ''}
+                className={`inline-block text-center cursor-text font-mono text-sm select-none leading-7
+                  ${isInSelection ? 'bg-blue-300' : ''}
                   ${isInSelectedFeature ? 'bg-yellow-200' : ''}
                   ${isInClickedFeature ? 'bg-green-200' : ''}
                   ${feature ? 'font-bold' : ''}
                 `}
                 style={{
                   width: charWidth,
-                  color: isSelected ? 'white' : '#000',
-                  backgroundColor: isSelected ? '#3B82F6' : 
-                    (isInSelection ? '#DBEAFE' : 
-                      (isInClickedFeature ? '#BBF7D0' : 
-                        (isInSelectedFeature ? '#FEF08A' : 'transparent'))),
+                  color: '#000',
+                  backgroundColor: isInSelection ? '#93C5FD' : 
+                    (isInClickedFeature ? '#BBF7D0' : 
+                      (isInSelectedFeature ? '#FEF08A' : 'transparent')),
                 }}
-                onClick={() => onBaseClick?.(position)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onBaseClick?.(position);
+                  setCursorPosition(position);
+                }}
                 title={`Position: ${position}`}
               >
                 {base}
@@ -545,6 +666,22 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
           })}
         </div>
         
+        {/* 光标竖线 */}
+        {cursorPosition !== null && cursorPosition >= startPos && cursorPosition <= endPos && (
+          <div
+            className="pointer-events-none z-20"
+            style={{
+              position: 'absolute',
+              left: 60 + (cursorPosition - startPos) * charWidth,
+              top: sequenceY - 4,
+              width: 2,
+              height: baseRowHeight + 8,
+              backgroundColor: '#2563EB',
+              boxShadow: '0 0 2px rgba(37, 99, 235, 0.5)',
+            }}
+          />
+        )}
+        
         {/* 位置号 */}
         <div
           className="absolute text-xs text-gray-500 font-mono leading-7"
@@ -552,26 +689,98 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
         >
           {startPos.toString().padStart(6)}
         </div>
-        
-
       </div>
     );
   }, [sequence, basesPerRow, charWidth, showFeatures, showEnzymes, showTranslations,
-      selectedBase, selectionStart, selectionEnd, getAminoAcid, getFeatureAtPosition, 
-      onFeatureClick, onEnzymeClick, onBaseClick, rowHeights, clickedFeature]);
+      effectiveSelectionStart, effectiveSelectionEnd, cursorPosition, getAminoAcid, getFeatureAtPosition, 
+      onFeatureClick, onEnzymeClick, onBaseClick, rowHeights, clickedFeature, selectedFeature,
+      handleMouseDown]);
 
   const totalRows = Math.ceil(sequence.length / basesPerRow);
-  const totalHeight = getRowOffset(totalRows) + 20;
+
+  // 获取选中的序列文本
+  const getSelectedSequence = useCallback(() => {
+    if (!hasSelection) return '';
+    const start = Math.min(effectiveSelectionStart!, effectiveSelectionEnd!);
+    const end = Math.max(effectiveSelectionStart!, effectiveSelectionEnd!);
+    return sequence.sequence.substring(start - 1, end);
+  }, [hasSelection, effectiveSelectionStart, effectiveSelectionEnd, sequence.sequence]);
 
   return (
     <div className="relative">
+      {/* 选择信息栏 */}
+      {hasSelection && (
+        <div className="mb-2 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="text-sm">
+              <span className="font-semibold text-blue-900">
+                {Math.min(effectiveSelectionStart!, effectiveSelectionEnd!)} .. {Math.max(effectiveSelectionStart!, effectiveSelectionEnd!)}
+              </span>
+              <span className="text-blue-700 ml-2">
+                = {Math.abs(effectiveSelectionEnd! - effectiveSelectionStart!) + 1} bp
+              </span>
+            </div>
+            <div className="text-xs text-gray-500 font-mono max-w-md truncate">
+              {getSelectedSequence().substring(0, 30)}
+              {getSelectedSequence().length > 30 ? '...' : ''}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const start = Math.min(effectiveSelectionStart!, effectiveSelectionEnd!);
+                const end = Math.max(effectiveSelectionStart!, effectiveSelectionEnd!);
+                onAddFeature?.(start, end);
+              }}
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              Add Feature
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const start = Math.min(effectiveSelectionStart!, effectiveSelectionEnd!);
+                const end = Math.max(effectiveSelectionStart!, effectiveSelectionEnd!);
+                onAddPrimer?.(start, end);
+              }}
+            >
+              <Dna className="w-4 h-4 mr-1" />
+              Add Primer
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const start = Math.min(effectiveSelectionStart!, effectiveSelectionEnd!);
+                const end = Math.max(effectiveSelectionStart!, effectiveSelectionEnd!);
+                onDeleteSelection?.(start, end);
+              }}
+            >
+              <Trash2 className="w-4 h-4 mr-1" />
+              Delete
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearSelection}
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+      
       <div
         ref={containerRef}
         className="overflow-auto bg-white border border-gray-200 rounded-lg"
         style={{ width, maxHeight: 650 }}
         onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
       >
-        <div style={{ width: basesPerRow * charWidth + 100, minHeight: totalHeight }}>
+        <div ref={sequenceContainerRef} style={{ width: basesPerRow * charWidth + 100 }}>
           {/* 表头 */}
           <div className="sticky top-0 bg-gray-50 border-b border-gray-200 px-4 py-2 flex items-center justify-between z-10">
             <div className="text-sm font-semibold text-gray-700 truncate max-w-md">
