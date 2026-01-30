@@ -385,8 +385,9 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
           onSelectionChange?.(start, end);
         }
       }
-      dragState.current = { start: null, current: null };
-      setDragRenderPos({ start: null, current: null });
+      // 不清除 dragRenderPos，让选择保持显示直到外部状态更新
+      // dragState.current = { start: null, current: null };
+      // setDragRenderPos({ start: null, current: null });
     }
   }, [isDragging, onSelectionChange]);
 
@@ -402,8 +403,9 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
             onSelectionChange?.(start, end);
           }
         }
-        dragState.current = { start: null, current: null };
-        setDragRenderPos({ start: null, current: null });
+        // 不清除 dragRenderPos，让选择保持显示直到外部状态更新
+        // dragState.current = { start: null, current: null };
+        // setDragRenderPos({ start: null, current: null });
       }
     };
 
@@ -624,10 +626,10 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
         >
           {rowSequence.split('').map((base, idx) => {
             const position = startPos + idx;
-            // 高亮区域只在竖线中间（不包含竖线位置本身）
+            // 高亮区域包含起始位置，不包含结束位置（与竖线边界对应）
             const isInSelection = effectiveSelection !== null && 
               effectiveSelection.start !== effectiveSelection.end &&
-              position > effectiveSelection.start &&
+              position >= effectiveSelection.start &&
               position < effectiveSelection.end;
             const feature = getFeatureAtPosition(position);
             
