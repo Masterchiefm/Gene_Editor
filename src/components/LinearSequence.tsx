@@ -198,7 +198,7 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
   
   // 有效的选择范围
   const effectiveSelection = useMemo(() => {
-    if (externalSelectionStart !== null && externalSelectionEnd !== null) {
+    if (externalSelectionStart != null && externalSelectionEnd != null) {
       return {
         start: Math.min(externalSelectionStart, externalSelectionEnd),
         end: Math.max(externalSelectionStart, externalSelectionEnd),
@@ -237,8 +237,6 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
       rowFeatures: Feature[];
     }> = [];
     
-    let currentOffset = HEADER_HEIGHT;
-    
     for (let rowIndex = 0; rowIndex < totalRows; rowIndex++) {
       const startPos = rowIndex * basesPerRow + 1;
       const endPos = Math.min(startPos + basesPerRow - 1, sequence.length);
@@ -261,7 +259,7 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
       
       // 计算各部分位置
       let currentY = PADDING_Y;
-      const rulerY = currentY;
+      // ruler position: currentY
       currentY += 16;
       const sequenceY = currentY;
       currentY += BASE_ROW_HEIGHT + 4;
@@ -720,7 +718,8 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
       effectiveSelection, cursorPosition, getFeatureAtPosition, 
       onFeatureClick, onEnzymeClick, onBaseClick, handleMouseDown]);
 
-  const totalHeight = useMemo(() => {
+  // Calculate total height for potential future use
+  useMemo(() => {
     return rowsData.reduce((sum, row) => sum + row.rowHeight, HEADER_HEIGHT);
   }, [rowsData]);
 
