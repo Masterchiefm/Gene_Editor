@@ -123,4 +123,4 @@ MIT License
 
 ## 致谢
 
-本项目受 [SnapGene](https://www.snapgene.com/) 启发，为科研工作者提供免费的DNA序列编辑工具。
+本项目受 [SnapGene](https://www.snapgene.com/) 启发，使用KIMI v2.5 生成、调试代码。为科研工作者提供免费的DNA序列编辑工具。
