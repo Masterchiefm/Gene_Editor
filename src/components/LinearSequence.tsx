@@ -197,18 +197,20 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
   const rafRef = useRef<number | null>(null);
   const [dragRenderPos, setDragRenderPos] = useState<{ start: number | null; current: number | null }>({ start: null, current: null });
   
-  // 有效的选择范围
+  // 有效的选择范围 - 优先使用内部拖拽状态
   const effectiveSelection = useMemo(() => {
-    if (externalSelectionStart != null && externalSelectionEnd != null) {
-      return {
-        start: Math.min(externalSelectionStart, externalSelectionEnd),
-        end: Math.max(externalSelectionStart, externalSelectionEnd),
-      };
-    }
+    // 优先使用内部拖拽状态
     if (dragRenderPos.start !== null && dragRenderPos.current !== null) {
       return {
         start: Math.min(dragRenderPos.start, dragRenderPos.current),
         end: Math.max(dragRenderPos.start, dragRenderPos.current),
+      };
+    }
+    // 其次使用外部传入的状态
+    if (externalSelectionStart != null && externalSelectionEnd != null) {
+      return {
+        start: Math.min(externalSelectionStart, externalSelectionEnd),
+        end: Math.max(externalSelectionStart, externalSelectionEnd),
       };
     }
     return null;
@@ -381,32 +383,17 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
   const handleMouseUp = useCallback(() => {
     if (isDragging) {
       setIsDragging(false);
-      if (dragState.current.start !== null && dragState.current.current !== null) {
-        const start = Math.min(dragState.current.start, dragState.current.current);
-        const end = Math.max(dragState.current.start, dragState.current.current);
-        if (start !== end && hasDragged.current) {
-          // 只有在拖拽了（不是简单点击）并且有范围时才更新选择
-          onSelectionChange?.(start, end);
-        }
-      }
-      // 不清除 dragRenderPos，让选择保持显示直到外部状态更新
+      // 不再调用 onSelectionChange，只在内部保留选择状态
+      // 只有点击 X 按钮时才清除选择
     }
-  }, [isDragging, onSelectionChange]);
+  }, [isDragging]);
 
   // 全局鼠标释放监听
   useEffect(() => {
     const handleGlobalMouseUp = () => {
       if (isDragging) {
         setIsDragging(false);
-        if (dragState.current.start !== null && dragState.current.current !== null) {
-          const start = Math.min(dragState.current.start, dragState.current.current);
-          const end = Math.max(dragState.current.start, dragState.current.current);
-          if (start !== end && hasDragged.current) {
-            // 只有在拖拽了（不是简单点击）并且有范围时才更新选择
-            onSelectionChange?.(start, end);
-          }
-        }
-        // 不清除 dragRenderPos，让选择保持显示直到外部状态更新
+        // 不再调用 onSelectionChange，只在内部保留选择状态
       }
     };
 
@@ -414,7 +401,7 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
       window.addEventListener('mouseup', handleGlobalMouseUp);
       return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
     }
-  }, [isDragging, onSelectionChange]);
+  }, [isDragging]);
 
   // 清理 RAF
   useEffect(() => {
@@ -425,11 +412,12 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
     };
   }, []);
 
-  // 清除选择
+  // 清除选择 - 只有点击 X 按钮时才调用
   const clearSelection = useCallback(() => {
     onSelectionChange?.(null, null);
     dragState.current = { start: null, current: null };
     setDragRenderPos({ start: null, current: null });
+    setCursorPosition(null);
   }, [onSelectionChange]);
 
   // 获取选中的序列文本
@@ -795,14 +783,6 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
         style={{ width, maxHeight: 650 }}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onClick={(e) => {
-          // 点击空白处取消选择
-          const target = e.target as HTMLElement;
-          if (!target.closest('[data-sequence-base]')) {
-            clearSelection();
-            setCursorPosition(null);
-          }
-        }}
       >
         <div style={{ width: basesPerRow * CHAR_WIDTH + 100 }}>
           {/* 表头 */}
