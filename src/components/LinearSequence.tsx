@@ -191,6 +191,7 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const dragState = useRef<{ start: number | null; current: number | null }>({ start: null, current: null });
   const [cursorPosition, setCursorPosition] = useState<number | null>(null);
+  const hasDragged = useRef(false); // 用于区分点击和拖拽
   
   // 使用 RAF 优化拖拽更新
   const rafRef = useRef<number | null>(null);
@@ -335,6 +336,7 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
   // 拖拽更新使用 RAF
   const updateDragPosition = useCallback((pos: number) => {
     dragState.current.current = pos;
+    hasDragged.current = true; // 标记为拖拽操作
     
     if (rafRef.current === null) {
       rafRef.current = requestAnimationFrame(() => {
@@ -350,6 +352,7 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
     const pos = getPositionFromMouse(e.clientX, e.clientY);
     if (pos !== null) {
       setIsDragging(true);
+      hasDragged.current = false; // 重置拖拽标记
       dragState.current = { start: pos, current: pos };
       setDragRenderPos({ start: pos, current: pos });
       setCursorPosition(pos);
@@ -381,13 +384,12 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
       if (dragState.current.start !== null && dragState.current.current !== null) {
         const start = Math.min(dragState.current.start, dragState.current.current);
         const end = Math.max(dragState.current.start, dragState.current.current);
-        if (start !== end) {
+        if (start !== end && hasDragged.current) {
+          // 只有在拖拽了（不是简单点击）并且有范围时才更新选择
           onSelectionChange?.(start, end);
         }
       }
       // 不清除 dragRenderPos，让选择保持显示直到外部状态更新
-      // dragState.current = { start: null, current: null };
-      // setDragRenderPos({ start: null, current: null });
     }
   }, [isDragging, onSelectionChange]);
 
@@ -399,13 +401,12 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
         if (dragState.current.start !== null && dragState.current.current !== null) {
           const start = Math.min(dragState.current.start, dragState.current.current);
           const end = Math.max(dragState.current.start, dragState.current.current);
-          if (start !== end) {
+          if (start !== end && hasDragged.current) {
+            // 只有在拖拽了（不是简单点击）并且有范围时才更新选择
             onSelectionChange?.(start, end);
           }
         }
         // 不清除 dragRenderPos，让选择保持显示直到外部状态更新
-        // dragState.current = { start: null, current: null };
-        // setDragRenderPos({ start: null, current: null });
       }
     };
 
@@ -648,6 +649,11 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
+                  // 如果是拖拽操作，不触发 onBaseClick
+                  if (hasDragged.current) {
+                    hasDragged.current = false;
+                    return;
+                  }
                   onBaseClick?.(position);
                   setCursorPosition(position);
                 }}
