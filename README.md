@@ -2,7 +2,13 @@
 
 一个功能强大的DNA序列查看和编辑工具，专为分子生物学研究设计。支持环形质粒可视化、限制酶分析、序列编辑等功能。
 
-![Gene Editor Screenshot](./screenshot.png)
+## 界面预览
+
+### 环形质粒图谱 (Map View)
+![Map View](./screenshoot/map.jpeg)
+
+### 线性序列视图 (Sequence View)
+![Sequence View](./screenshoot/seq.jpeg)
 
 ## 功能特性
 
@@ -86,9 +92,9 @@ npm run preview
 - **Features** - 特征列表
 
 ### 编辑操作
-- 在序列视图中选择区域
-- 使用工具栏进行剪切、复制、粘贴、删除
-- 支持查找和替换功能
+- 在序列视图中拖拽选择区域
+- 选择后显示操作栏：Add Feature / Add Primer / Delete
+- 点击 X 按钮清除选择
 
 ## 支持的特征类型
 
