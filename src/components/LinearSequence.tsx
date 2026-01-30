@@ -626,14 +626,17 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
         >
           {rowSequence.split('').map((base, idx) => {
             const position = startPos + idx;
+            // 高亮区域只在竖线中间（不包含竖线位置本身）
             const isInSelection = effectiveSelection !== null && 
-              position >= effectiveSelection.start &&
-              position <= effectiveSelection.end;
+              effectiveSelection.start !== effectiveSelection.end &&
+              position > effectiveSelection.start &&
+              position < effectiveSelection.end;
             const feature = getFeatureAtPosition(position);
             
             return (
               <span
                 key={idx}
+                data-sequence-base="true"
                 className={`inline-block text-center cursor-text font-mono text-sm select-none leading-7
                   ${isInSelection ? 'bg-blue-300' : ''}
                   ${feature ? 'font-bold' : ''}
@@ -655,8 +658,8 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
           })}
         </div>
         
-        {/* 选择起始竖线 */}
-        {effectiveSelection !== null && effectiveSelection.start >= startPos && effectiveSelection.start <= endPos && (
+        {/* 选择起始竖线 - 只要有选择就显示 */}
+        {effectiveSelection !== null && effectiveSelection.start >= startPos && effectiveSelection.start <= endPos && effectiveSelection.start !== effectiveSelection.end && (
           <div
             className="pointer-events-none z-20"
             style={{
@@ -671,8 +674,8 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
           />
         )}
         
-        {/* 选择结束竖线 */}
-        {effectiveSelection !== null && effectiveSelection.end >= startPos && effectiveSelection.end <= endPos && (
+        {/* 选择结束竖线 - 只要有选择就显示 */}
+        {effectiveSelection !== null && effectiveSelection.end >= startPos && effectiveSelection.end <= endPos && effectiveSelection.start !== effectiveSelection.end && (
           <div
             className="pointer-events-none z-20"
             style={{
@@ -689,7 +692,7 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
         
         {/* 光标竖线 - 当没有有效选择或光标不在选择边界时显示 */}
         {cursorPosition !== null && cursorPosition >= startPos && cursorPosition <= endPos && 
-         (effectiveSelection === null || (cursorPosition !== effectiveSelection.start && cursorPosition !== effectiveSelection.end)) && (
+         (effectiveSelection === null || effectiveSelection.start === effectiveSelection.end || (cursorPosition !== effectiveSelection.start && cursorPosition !== effectiveSelection.end)) && (
           <div
             className="pointer-events-none z-20"
             style={{
@@ -785,6 +788,14 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
         style={{ width, maxHeight: 650 }}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
+        onClick={(e) => {
+          // 点击空白处取消选择
+          const target = e.target as HTMLElement;
+          if (!target.closest('[data-sequence-base]')) {
+            clearSelection();
+            setCursorPosition(null);
+          }
+        }}
       >
         <div style={{ width: basesPerRow * CHAR_WIDTH + 100 }}>
           {/* 表头 */}
