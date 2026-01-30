@@ -322,7 +322,8 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
     let accumulatedY = 0;
     for (const row of rowsData) {
       if (accumulatedY + row.rowHeight > y) {
-        const col = Math.floor((x - 60 + CHAR_WIDTH / 2) / CHAR_WIDTH);
+        // 移除 +CHAR_WIDTH/2 偏移，使用更精确的计算
+        const col = Math.floor((x - 60) / CHAR_WIDTH);
         if (col < 0 || col >= basesPerRow) return null;
         const position = row.startPos + col;
         return position > sequence.length ? null : position;
@@ -654,8 +655,41 @@ export const LinearSequence: React.FC<LinearSequenceProps> = ({
           })}
         </div>
         
-        {/* 光标竖线 - 延长到整个行高 */}
-        {cursorPosition !== null && cursorPosition >= startPos && cursorPosition <= endPos && (
+        {/* 选择起始竖线 */}
+        {effectiveSelection !== null && effectiveSelection.start >= startPos && effectiveSelection.start <= endPos && (
+          <div
+            className="pointer-events-none z-20"
+            style={{
+              position: 'absolute',
+              left: 60 + (effectiveSelection.start - startPos) * CHAR_WIDTH,
+              top: 0,
+              width: 2,
+              height: rowHeight,
+              backgroundColor: '#1E40AF',
+              boxShadow: '0 0 4px rgba(30, 64, 175, 0.8)',
+            }}
+          />
+        )}
+        
+        {/* 选择结束竖线 */}
+        {effectiveSelection !== null && effectiveSelection.end >= startPos && effectiveSelection.end <= endPos && (
+          <div
+            className="pointer-events-none z-20"
+            style={{
+              position: 'absolute',
+              left: 60 + (effectiveSelection.end - startPos) * CHAR_WIDTH,
+              top: 0,
+              width: 2,
+              height: rowHeight,
+              backgroundColor: '#1E40AF',
+              boxShadow: '0 0 4px rgba(30, 64, 175, 0.8)',
+            }}
+          />
+        )}
+        
+        {/* 光标竖线 - 当没有有效选择或光标不在选择边界时显示 */}
+        {cursorPosition !== null && cursorPosition >= startPos && cursorPosition <= endPos && 
+         (effectiveSelection === null || (cursorPosition !== effectiveSelection.start && cursorPosition !== effectiveSelection.end)) && (
           <div
             className="pointer-events-none z-20"
             style={{
