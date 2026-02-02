@@ -289,7 +289,7 @@ function App() {
             <Button
               variant="outline"
               size="sm"
-              onClick={saveAsGenBank}
+              onClick={() => saveAsGenBank()}
             >
               <Save className="w-4 h-4 mr-1" />
               Save
@@ -298,7 +298,7 @@ function App() {
             <Button
               variant="outline"
               size="sm"
-              onClick={saveAsFasta}
+              onClick={() => saveAsFasta()}
             >
               <Download className="w-4 h-4 mr-1" />
               Export
@@ -315,7 +315,7 @@ function App() {
           onReverseComplement={reverseComplement}
           onFind={handleFind}
           onReplace={handleReplace}
-          onSave={saveAsGenBank}
+          onSave={() => saveAsGenBank()}
           onSaveAs={(format) => format === 'genbank' ? saveAsGenBank() : saveAsFasta()}
           onOpen={() => fileInputRef.current?.click()}
           onUndo={handleUndo}

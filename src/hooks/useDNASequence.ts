@@ -1,6 +1,8 @@
 import { useState, useCallback, useRef } from 'react';
 import type { DNASequence, Feature, ViewState } from '@/types/dna';
 import { parseGenBank, generateGenBank, detectRestrictionSites } from '@/utils/genbankParser';
+import { writeTextFile } from '@tauri-apps/plugin-fs';
+import { save } from '@tauri-apps/plugin-dialog';
 
 export function useDNASequence() {
   const [sequence, setSequence] = useState<DNASequence | null>(null);
@@ -177,35 +179,82 @@ export function useDNASequence() {
     });
   }, []);
 
+  // 检查是否在Tauri环境中
+  const isTauri = useCallback(() => {
+    return typeof window !== 'undefined' && !!(window as unknown as { __TAURI__: unknown }).__TAURI__;
+  }, []);
+
   // 保存为GenBank文件
-  const saveAsGenBank = useCallback(() => {
+  const saveAsGenBank = useCallback(async () => {
     if (!sequence) return;
     const content = generateGenBank(sequence);
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${sequence.name}.gb`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, [sequence]);
+    const filename = `${sequence.name}.gb`;
+    
+    if (isTauri()) {
+      // Tauri桌面环境 - 使用原生文件对话框
+      try {
+        const filePath = await save({
+          defaultPath: filename,
+          filters: [
+            { name: 'GenBank Files', extensions: ['gb', 'gbk'] },
+            { name: 'All Files', extensions: ['*'] }
+          ]
+        });
+        if (filePath) {
+          await writeTextFile(filePath, content);
+        }
+      } catch (error) {
+        console.error('Failed to save file:', error);
+      }
+    } else {
+      // Web环境 - 使用浏览器下载
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  }, [sequence, isTauri]);
 
   // 保存为FASTA文件
-  const saveAsFasta = useCallback(() => {
+  const saveAsFasta = useCallback(async () => {
     if (!sequence) return;
     const content = `>${sequence.name} ${sequence.description}\n${sequence.sequence.match(/.{1,60}/g)?.join('\n') || sequence.sequence}\n`;
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${sequence.name}.fa`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, [sequence]);
+    const filename = `${sequence.name}.fa`;
+    
+    if (isTauri()) {
+      // Tauri桌面环境 - 使用原生文件对话框
+      try {
+        const filePath = await save({
+          defaultPath: filename,
+          filters: [
+            { name: 'FASTA Files', extensions: ['fa', 'fasta'] },
+            { name: 'All Files', extensions: ['*'] }
+          ]
+        });
+        if (filePath) {
+          await writeTextFile(filePath, content);
+        }
+      } catch (error) {
+        console.error('Failed to save file:', error);
+      }
+    } else {
+      // Web环境 - 使用浏览器下载
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  }, [sequence, isTauri]);
 
   // 更新视图状态
   const updateViewState = useCallback((updates: Partial<ViewState>) => {

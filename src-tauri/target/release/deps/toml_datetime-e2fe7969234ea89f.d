@@ -1,0 +1,10 @@
+C:\Users\moqiq\Downloads\Kimi_Agent_SnapGene\app\src-tauri\target\release\deps\toml_datetime-e2fe7969234ea89f.d: C:\Users\moqiq\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-0.7.5+spec-1.1.0\src\lib.rs C:\Users\moqiq\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-0.7.5+spec-1.1.0\src\datetime.rs C:\Users\moqiq\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-0.7.5+spec-1.1.0\src\de.rs C:\Users\moqiq\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-0.7.5+spec-1.1.0\src\ser.rs
+
+C:\Users\moqiq\Downloads\Kimi_Agent_SnapGene\app\src-tauri\target\release\deps\libtoml_datetime-e2fe7969234ea89f.rlib: C:\Users\moqiq\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-0.7.5+spec-1.1.0\src\lib.rs C:\Users\moqiq\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-0.7.5+spec-1.1.0\src\datetime.rs C:\Users\moqiq\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-0.7.5+spec-1.1.0\src\de.rs C:\Users\moqiq\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-0.7.5+spec-1.1.0\src\ser.rs
+
+C:\Users\moqiq\Downloads\Kimi_Agent_SnapGene\app\src-tauri\target\release\deps\libtoml_datetime-e2fe7969234ea89f.rmeta: C:\Users\moqiq\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-0.7.5+spec-1.1.0\src\lib.rs C:\Users\moqiq\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-0.7.5+spec-1.1.0\src\datetime.rs C:\Users\moqiq\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-0.7.5+spec-1.1.0\src\de.rs C:\Users\moqiq\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-0.7.5+spec-1.1.0\src\ser.rs
+
+C:\Users\moqiq\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-0.7.5+spec-1.1.0\src\lib.rs:
+C:\Users\moqiq\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-0.7.5+spec-1.1.0\src\datetime.rs:
+C:\Users\moqiq\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-0.7.5+spec-1.1.0\src\de.rs:
+C:\Users\moqiq\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-0.7.5+spec-1.1.0\src\ser.rs:
