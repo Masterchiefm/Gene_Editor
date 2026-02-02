@@ -88,7 +88,7 @@ export const SequenceToolbar: React.FC<SequenceToolbarProps> = ({
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="flex items-center gap-1">
               <FileDown className="h-4 w-4" />
-              Export
+              Save as
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>

@@ -269,41 +269,13 @@ function App() {
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <FileUp className="w-4 h-4 mr-1" />
-              Open
-            </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".gb,.gbk,.genbank"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => saveAsGenBank()}
-            >
-              <Save className="w-4 h-4 mr-1" />
-              Save
-            </Button>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => saveAsFasta()}
-            >
-              <Download className="w-4 h-4 mr-1" />
-              Export
-            </Button>
-          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".gb,.gbk,.genbank"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
         </div>
         
         {/* 工具栏 */}
