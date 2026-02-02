@@ -18,7 +18,7 @@ import { FeatureList } from '@/components/FeatureList';
 import { SequenceToolbar } from '@/components/SequenceToolbar';
 import { 
   FileUp, Plus, Dna, Circle, AlignLeft, Scissors, 
-  Layers, Save, Download 
+  Layers
 } from 'lucide-react';
 import './App.css';
 

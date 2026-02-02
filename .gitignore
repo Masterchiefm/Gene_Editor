@@ -2,17 +2,27 @@
 node_modules
 .pnp
 .pnp.js
+package-lock.json
 
 # Build outputs
 dist
 dist-ssr
 *.local
 
+# Tauri / Rust
+src-tauri/target
+src-tauri/Cargo.lock
+
+# Vite cache
+.vite
+
+# Temporary screenshots
+屏幕截图*
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
