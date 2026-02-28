@@ -1,2 +1,0 @@
-cargo:rustc-link-search=native=C:\Users\moqiq\Downloads\Kimi_Agent_SnapGene\app\src-tauri\target\release\build\webview2-com-sys-83b1b08c1f9f6af0\out\x64
-cargo:rustc-link-lib=advapi32
